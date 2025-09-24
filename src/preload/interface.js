@@ -13,6 +13,12 @@ let currentUpdateSearchInputTextListener
 
 export default {
   /**
+   * @param {string} videoId
+   * @returns {Promise<string>}
+   */
+  runYtdlp: (videoId) => ipcRenderer.invoke(IpcChannels.RUN_YTDLP, videoId),
+
+  /**
    * @returns {Promise<string>}
    */
   getSystemLocale: () => {

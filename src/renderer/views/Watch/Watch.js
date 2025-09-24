@@ -1425,6 +1425,34 @@ export default defineComponent({
       this.handleWatchProgressAutoSave()
     },
 
+    attemptYtdlpFallback: async function () {
+      this.errorMessage = 'Stream failed. Attempting fallback with yt-dlp...'
+      this.customErrorIcon = ['fas', 'sync-alt']
+
+      try {
+        const response = await window.ftElectron.runYtdlp(this.videoId)
+        if (response.success && response.url) {
+          this.errorMessage = ''
+          this.customErrorIcon = null
+          this.manifestSrc = response.url // Update the manifest URL
+          this.manifestMimeType = 'video/mp4'
+          return
+        } else {
+          console.error('yt-dlp fallback failed:', response.error)
+        }
+      } catch (error) {
+        console.error('runYtdlp invocation failed:', error)
+      }
+
+      // If the try block fails, set the final error message
+      if (this.videoGenreIsMusic) {
+        this.errorMessage = 'Deb [BAD_HTTP_STATUS: 403] Fallback failed. Potential causes: IP block, streaming URL deciphering failed or music video geo-block'
+      } else {
+        this.errorMessage = 'Deb [BAD_HTTP_STATUS: 403] Fallback failed. Potential causes: IP block or streaming URL deciphering failed'
+      }
+      this.customErrorIcon = ['fas', 'exclamation-circle']
+    },
+
     /**
      * @param {import('shaka-player/dist/shaka-player.ui').default.util.Error} error
      */
@@ -1455,11 +1483,7 @@ export default defineComponent({
               return
             }
 
-            if (this.videoGenreIsMusic) {
-              this.errorMessage = '[BAD_HTTP_STATUS: 403] Potential causes: IP block, streaming URL deciphering failed or music video geo-block'
-            } else {
-              this.errorMessage = '[BAD_HTTP_STATUS: 403] Potential causes: IP block or streaming URL deciphering failed'
-            }
+            this.attemptYtdlpFallback()
             return
         }
       } else if (error.code === Code.VIDEO_ERROR) {

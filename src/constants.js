@@ -1,5 +1,6 @@
 // IPC Channels
 const IpcChannels = {
+  RUN_YTDLP: 'run-ytdlp',
   ENABLE_PROXY: 'enable-proxy',
   DISABLE_PROXY: 'disable-proxy',
   GET_SYSTEM_LOCALE: 'get-system-locale',

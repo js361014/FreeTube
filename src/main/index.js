@@ -5,7 +5,7 @@ import {
   Tray
 } from 'electron'
 import path from 'path'
-import cp from 'child_process'
+import { cp, exec } from 'child_process'
 
 import {
   IpcChannels,
@@ -29,6 +29,7 @@ import packageDetails from '../../package.json'
 import { generatePoToken } from './poTokenGenerator'
 
 const brotliDecompressAsync = promisify(brotliDecompress)
+const execPromise = promisify(exec)
 
 if (process.argv.includes('--version')) {
   console.log(`v${packageDetails.version} Beta`) // eslint-disable-line no-console
@@ -1234,6 +1235,32 @@ function runApp() {
   ipcMain.handle(IpcChannels.GET_SYSTEM_LOCALE, () => {
     // we should switch to getPreferredSystemLanguages at some point and iterate through until we find a supported locale
     return app.getSystemLocale()
+  })
+
+  ipcMain.handle(IpcChannels.RUN_YTDLP, async (event, videoId) => {
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
+    const command = `yt-dlp -j -f "b" --no-warnings "${videoUrl}"`
+    try {
+      const { stdout, stderr } = await execPromise(command)
+      if (stderr) {
+        return { success: false, error: 'yt-dlp stderr:' + '`' + stderr + '`' }
+      }
+      if (!stdout) {
+        return { success: false, error: 'empty yt-dlp output' }
+      }
+      try {
+        const videoInfo = JSON.parse(stdout)
+        if (videoInfo.url) {
+          return { success: true, url: videoInfo.url }
+        } else {
+          return { success: false, error: 'no url in yt-dlp video info' }
+        }
+      } catch (e) {
+        return { success: false, error: e.message }
+      }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
   })
 
   ipcMain.handle(IpcChannels.GET_SCREENSHOT_FALLBACK_FOLDER, (event) => {
